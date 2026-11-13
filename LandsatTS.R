@@ -33,3 +33,40 @@ ee_Initialize(
 # Check Earth Engine connection
 ee_check()
 
+fires <- st_read("/Users/spensermorouney/Desktop/data/LandsatTS/LandsatTS_greening/drive-download-20261112T223101Z-1-001/AllFireShapefile.shp")
+names(fires)
+
+pixel_list <- fires %>%
+       split(.$Fire_ID) %>%
+       map(
+             lsat_get_pixel_centers,
+            pixel_prefix_from = "Fire_ID"
+         ) %>%
+      bind_rows()
+
+pixel_list
+
+ pixel_list <- pixel_list %>%
+       mutate(
+             Fire_ID = sub("_.*$", "", sample_id)
+        )
+ 
+ pixel_list <- pixel_list %>%
+     left_join(
+             st_drop_geometry(fires),
+             by = "Fire_ID"
+         )
+ 
+ chunk_size <- 500
+ 
+ pixel_chunks <- split(
+   pixel_list,
+   ceiling(seq_len(nrow(pixel_list)) / chunk_size)
+ )
+ 
+ length(pixel_chunks)
+ 
+ 
+ 
+ 
+

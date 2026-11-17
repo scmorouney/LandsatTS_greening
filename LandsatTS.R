@@ -64,8 +64,18 @@ pixel_list
              by = "Fire_ID"
          )
  
+ 
+
+ 
+ # Check total sampled pixels
+ nrow(sampled_pixels)
+ 
+ # Check sample size by fire
+ sampled_pixels %>%
+   count(Fire_ID, name = "sampled_pixels")
+ 
  #specify how many pixels to run per chunk for export 
- chunk_size <- 500
+ chunk_size <- 50
  
  #divide dataset into desired chunk size for export 
  pixel_chunks <- split(
@@ -79,17 +89,65 @@ pixel_list
  
  #test export on one chunk (good to estimate total time before starting)
  
- test_chunk <- pixel_chunks[[1]]
+ test_chunk <- pixel_chunks[1:5]
  
 nrow(test_chunk) #make sure this is the same as chunk_size
 
+test_pixels <- bind_rows(test_chunk)
 
 test_task <- lsat_export_ts(
-    test_chunk,
-    max_chunk_size = 500
-    )
+  test_pixels,
+  max_chunk_size = 50,
+  start_date = "2016-01-01",
+  end_date = "2025-12-31", 
+  start_doy = 152, # limit to just growing season to speed up export 
+  end_doy= 243
+)
  
- 
+names(test_task)
+
+
+
+####### Randomly sample 50% of pixels within each fire to reduce load#######
+set.seed(0)
+
+sampled_pixels <- pixel_list %>%
+  group_by(Fire_ID) %>%
+  slice_sample(prop = 0.25) %>%
+  ungroup()
+
+
+#specify how many pixels to run per chunk for export 
+chunk_size <- 500
+
+#divide dataset into desired chunk size for export 
+pixel_chunks <- split(
+  sampled_pixels,
+  ceiling(seq_len(nrow(sampled_pixels)) / chunk_size)
+)
+
+#number of pixel chunks total 
+length(pixel_chunks)
+
+
+#test export on one chunk (good to estimate total time before starting)
+
+test_chunk <- pixel_chunks[[1]]
+
+nrow(test_chunk) #make sure this is the same as chunk_size
+
+test_pixels <- bind_rows(test_chunk)
+
+test_task <- lsat_export_ts(
+  test_pixels,
+  max_chunk_size = 500,
+  start_date = "2016-01-01",
+  end_date = "2025-12-31", 
+  start_doy = 152, # limit to just growing season to speed up export 
+  end_doy= 243
+)
+
+
  ##### EE tools for managing exports #####
  
  #check the submitted tasks 

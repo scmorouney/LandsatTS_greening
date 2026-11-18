@@ -38,6 +38,42 @@ fires <- st_read("/Users/spensermorouney/Desktop/data/LandsatTS/LandsatTS_greeni
 #check variables 
 names(fires)
 
+
+###should work with normal points##
+points <- st_read("/Users/spensermorouney/Desktop/data/LandsatTS/LandsatTS_greening/RandomPoints/Burned_RandomSample_Test2.shp")
+points$sample_id <- paste0("S_", 1:nrow(points))
+nrow(points)
+head(points)
+
+
+#specify how many pixels to run per chunk for export 
+chunk_size <- 1000
+
+#divide dataset into desired chunk size for export 
+point_chunks <- split(
+  points,
+  ceiling(seq_len(nrow(points)) / chunk_size)
+)
+
+test_chunk <- point_chunks[1:41]
+
+nrow(test_chunk) #make sure this is the same as chunk_size
+
+test_points <- bind_rows(test_chunk)
+
+test_task <- lsat_export_ts(
+  test_points,
+  max_chunk_size = 50,
+  start_date = "2016-01-01",
+  end_date = "2025-12-31", 
+  start_doy = 152, # limit to just growing season to speed up export 
+  end_doy= 243
+)
+
+
+####################################
+
+
 #create pixel centre for each pixel within each polygon  
 pixel_list <- fires %>%
        split(.$Fire_ID) %>%
@@ -48,8 +84,9 @@ pixel_list <- fires %>%
       bind_rows()
 
 #preview variables and geometry type 
-pixel_list
+pixel_list <- points
 
+head(pixel_list)
 
 #this code automatically created a sample ID based on fire ID - return to original format so can be joined
  pixel_list <- pixel_list %>%
@@ -116,6 +153,7 @@ sampled_pixels <- pixel_list %>%
   slice_sample(prop = 0.25) %>%
   ungroup()
 
+length(sampled_pixels)
 
 #specify how many pixels to run per chunk for export 
 chunk_size <- 500
@@ -146,6 +184,13 @@ test_task <- lsat_export_ts(
   start_doy = 152, # limit to just growing season to speed up export 
   end_doy= 243
 )
+
+
+
+## LOOKING AT OUTPUT CSVs ## 
+Landsat<- read.csv("lsatTS_export_chunk_TEST500.csv")
+head(Landsat)
+
 
 
  ##### EE tools for managing exports #####

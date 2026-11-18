@@ -46,24 +46,9 @@ nrow(points)
 head(points)
 
 
-#specify how many pixels to run per chunk for export 
-chunk_size <- 1000
-
-#divide dataset into desired chunk size for export 
-point_chunks <- split(
+task <- lsat_export_ts(
   points,
-  ceiling(seq_len(nrow(points)) / chunk_size)
-)
-
-test_chunk <- point_chunks[1:41]
-
-nrow(test_chunk) #make sure this is the same as chunk_size
-
-test_points <- bind_rows(test_chunk)
-
-test_task <- lsat_export_ts(
-  test_points,
-  max_chunk_size = 50,
+  max_chunk_size = 1000,
   start_date = "2016-01-01",
   end_date = "2025-12-31", 
   start_doy = 152, # limit to just growing season to speed up export 

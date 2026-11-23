@@ -54,14 +54,121 @@ head(points)
 task <- lsat_export_ts(
   points,
   max_chunk_size = 1000,
-  start_date = "2016-01-01",
-  end_date = "2025-12-31", 
+  start_date = "1985-01-01",
+  end_date = "2016-01-01", 
   start_doy = 152, # limit to just growing season to speed up export 
   end_doy= 243
 )
 
 
 ### PROCESSING ####
+
+
+## load in all data 2016-2023 ## 
+#was loaded in two chunks
+
+lsat.dt_chunk1_1<- list.files(path = "/Users/spensermorouney/Desktop/data/LandsatTS/LandsatTS_greening/LandsatChunks/LandsatTSChunks1", 
+                    pattern = "\\.csv$", 
+                    full.names = TRUE)
+
+# R automatically reads and binds every CSV found in that folder
+lsat.dt_chunk1_1 <- read_csv(lsat.dt_chunk1_1, id = "source_file")
+#lsat.dt_chunk1_1<- read_csv(lsat.dt_chunk1_1, id = "source_file")
+
+
+lsat.dt_chunk2_1<- list.files(path = "/Users/spensermorouney/Desktop/data/LandsatTS/LandsatTS_greening/LandsatChunks/LandsatTSChunks2", 
+                     pattern = "\\.csv$", 
+                     full.names = TRUE)
+lsat.dt_chunk2_1<- read_csv(lsat.dt_chunk2_1, id = "source_file")
+
+###run again 
+lsat.dt_16 <- rbind(lsat.dt_chunk1_1, lsat.dt_chunk2_1)
+                  
+
+
+
+## load in all data 1985-2016 ## 
+#was loaded in 4 chunks 
+
+lsat.dt_chunk1<- list.files(path = "/Users/spensermorouney/Desktop/data/LandsatTS/LandsatTS_greening/LandsatChunks2/LandsatChunks1", 
+                     pattern = "\\.csv$", 
+                     full.names = TRUE)
+
+# R automatically reads and binds every CSV found in that folder
+lsat.dt_chunk1<- read_csv(lsat.dt_chunk1, id = "source_file")
+
+
+lsat.dt_chunk2<- list.files(path = "/Users/spensermorouney/Desktop/data/LandsatTS/LandsatTS_greening/LandsatChunks2/LandsatChunks2", 
+                            pattern = "\\.csv$", 
+                            full.names = TRUE)
+lsat.dt_chunk2<- read_csv(lsat.dt_chunk2, id = "source_file")
+
+lsat.dt_chunk3<- list.files(path = "/Users/spensermorouney/Desktop/data/LandsatTS/LandsatTS_greening/LandsatChunks2/LandsatChunks3", 
+                            pattern = "\\.csv$", 
+                            full.names = TRUE)
+lsat.dt_chunk3<- read_csv(lsat.dt_chunk3, id = "source_file")
+
+
+lsat.dt_chunk4<- list.files(path = "/Users/spensermorouney/Desktop/data/LandsatTS/LandsatTS_greening/LandsatChunks2/LandsatChunks4", 
+                            pattern = "\\.csv$", 
+                            full.names = TRUE)
+lsat.dt_chunk4<- read_csv(lsat.dt_chunk4, id = "source_file")
+
+lsat.dt_85 <- rbind(lsat.dt_chunk1, lsat.dt_chunk2, lsat.dt_chunk3, lsat.dt_chunk4)
+
+
+#combine both exports compltely - this is full dataset 1985-2023
+#need to rerun lsat.dt_16 before this!!!!!!!!!!!
+lsat.dt <- rbind(lsat.dt_85, lsat.dt_16)
+
+
+
+
+
+
+
+
+### using landsat TS functions on all data (1985-2023) ###
+
+lsat.dt <- lsat_format_data(lsat.dt)
+head(lsat.dt)
+
+lsat.dt  <- lsat_clean_data(lsat.dt, geom.max = 15, cloud.max = 80, sza.max = 60, filter.cfmask.snow = T, filter.cfmask.water = T, filter.jrc.water = T)
+head(lsat.dt)
+
+data.summary.dt <- lsat_summarize_data(lsat.dt)
+
+lsat.dt <- lsat_calc_spectral_index(lsat.dt, si = 'ndvi')
+
+lsat.dt <- lsat_calibrate_rf(lsat.dt, 
+                             band.or.si = 'ndvi', 
+                             doy.rng = 151:242, 
+                             min.obs = 5, 
+                             frac.train = 0.75, 
+                             overwrite.col = T, 
+                             write.output = F)
+
+lsat.pheno.dt <- lsat_fit_phenological_curves(lsat.dt, si = 'ndvi', window.yrs = 5, window.min.obs = 10, spl.fit.outfile = F, progress = T)
+
+lsat.gs.dt <- lsat_summarize_growing_seasons(lsat.pheno.dt, si = 'ndvi', min.frac.of.max = 0.75)
+
+lsat.gs.eval.dt <- lsat_evaluate_phenological_max(lsat.pheno.dt, si = 'ndvi', min.obs = 10, reps = 5, min.frac.of.max = 0.75, outdir = NA)
+
+lsat.trnds.dt <- lsat_calc_trend(lsat.gs.dt, si = 'ndvi.max', 2016:2023, sig = 0.05)
+
+
+
+
+
+
+
+
+
+
+### ARCHIVE ####
+
+### practice with one chunk ###
+
 chunk1<- read.csv("/Users/spensermorouney/Desktop/data/LandsatTS/LandsatTS_greening/lsatTS_export_chunk_1.csv")
 lsat.dt_chunk1 <- lsat_format_data(chunk1)
 head(chunk1)
@@ -87,7 +194,6 @@ lsat_neighborhood_mean_fixed <- function(dt) {
   
   return(dt)
 }
-
 
 lsat.dt_chunk1 <- lsat_neighborhood_mean_fixed(lsat.dt_chunk1) #### this line is the issue with losing unique sampleID##
 head(lsat.dt_chunk1 )

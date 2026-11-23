@@ -2,3 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+LandsatChunks/
+LandsatChunks2/
+RandomPts/
+*.csv
